@@ -1,0 +1,7 @@
+# Test enum from string functionality
+
+Import('env')
+env.NanopbProto("enum.proto")
+p = env.Program(["enum_from_string.c", "enum.pb.c"])
+env.RunTest(p)
+

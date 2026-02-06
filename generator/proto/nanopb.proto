@@ -106,6 +106,9 @@ message NanoPBOptions {
   // Generate an enum->string mapping function (can take up lots of space).
   optional bool enum_to_string = 13 [default = false];
 
+  // Generate a string->enum mapping function using X-macros.
+  optional bool enum_from_string = 36 [default = false];
+
   // Generate validation methods for enums
   optional bool enum_validate = 32 [default = false];
 

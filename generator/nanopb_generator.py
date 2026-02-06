@@ -526,6 +526,22 @@ class Enum(ProtoElement):
                 Globals.naming_style.func_name('%s_name' % self.names),
                 Globals.naming_style.type_name(self.names))
 
+        if self.options.enum_from_string:
+            # Generate X-macro list for enum values
+            result += '#define %s(X) \\\n' % (
+                Globals.naming_style.define_name('%s_XMACRO_VALS' % self.names))
+            for i, ((enumname, value), strname) in enumerate(zip(self.values, self.value_longnames)):
+                # Use the short name (last part) for string representation
+                short_name = Globals.naming_style.enum_entry(strname.parts[-1])
+                enum_entry = Globals.naming_style.enum_entry(enumname)
+                line_ending = ' \\' if i < len(self.values) - 1 else ''
+                result += '    X(%s, "%s")%s\n' % (enum_entry, short_name, line_ending)
+
+            # Generate function declaration
+            result += 'bool %s(const char *str, %s *result);\n' % (
+                Globals.naming_style.func_name('%s_from_string' % self.names),
+                Globals.naming_style.type_name(self.names))
+
         if self.options.enum_validate:
             result += 'bool %s(%s v);\n' % (
                 Globals.naming_style.func_name('%s_valid' % self.names),
@@ -571,6 +587,23 @@ class Enum(ProtoElement):
                 )
 
         result += '    }\n'
+        result += '    return false;\n'
+        result += '}\n'
+
+        return result
+
+    def enum_from_string_definition(self):
+        if not self.options.enum_from_string:
+            return ""
+
+        func_name = Globals.naming_style.func_name('%s_from_string' % self.names)
+        type_name = Globals.naming_style.type_name(self.names)
+        xmacro_name = Globals.naming_style.define_name('%s_XMACRO_VALS' % self.names)
+
+        result = 'bool %s(const char *str, %s *result) {\n' % (func_name, type_name)
+        result += '    #define X(val, name) if (strcmp(str, name) == 0) { *result = val; return true; }\n'
+        result += '    %s(X)\n' % xmacro_name
+        result += '    #undef X\n'
         result += '    return false;\n'
         result += '}\n'
 
@@ -2335,6 +2368,10 @@ class ProtoFile:
         # Generate enum_name function if enum_to_string option is defined
         for enum in self.enums:
             yield enum.enum_to_string_definition() + '\n'
+
+        # Generate enum_from_string function if enum_from_string option is defined
+        for enum in self.enums:
+            yield enum.enum_from_string_definition() + '\n'
 
         # Generate enum_valid function if enum_valid option is defined
         for enum in self.enums:
